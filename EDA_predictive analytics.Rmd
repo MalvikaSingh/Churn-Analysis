@@ -1,0 +1,164 @@
+---
+title: "newt2"
+author: "Malvika Singh"
+date: "7/18/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Why do Predictive Analytics?
+
+The focus of this Predictive analytics is to have maximum Return on Investment(ROI). It is strategic and effective to target smaller high revenue generating group who have a higher risk of churning out. Preventing their churning rate is definitely more efficient and fruitful.
+Customer Retention Cost needs to be minimized by using better predictive models.
+We will begin with Logistic Regression.
+Logistic regression is a linear classifier, which makes it easier to interpret than non-linear models. At the same time, because it’s a linear model, it has a high bias towards this type of fit, so it may not perform well on non-linear data.
+Since I am not sure of whether the data set provided is linear or not, I will begin with Logistic Regression.
+## Step 1: Splitting data into training and test
+I will be splitting my data into a training set (75%), and test set (25%). I’m going to remove the customerID feature because it’s unique for each observation, and probably won’t add valuable information to my model.
+
+```{r prologue}
+library(caret)
+library(dplyr)
+data <- read.csv("C:/Users/Malvika's Dell XPS13/Downloads/demodata.csv",header = TRUE, sep = ",")
+# removing customerID; doesn't add any value to the model
+data <- data %>% select(-customerid)  
+Churn <- with(data, ifelse(churn==0, "No","Yes"))
+data <- data.frame(data,Churn)
+# train/test split; 75%/25%
+
+# setting the seed for reproducibility
+set.seed(5)
+inTrain <- createDataPartition(y = data$Churn, p=0.75, list=FALSE)
+contrasts(data$Churn)  # Yes = 1, No = 0
+train <- data[inTrain,]
+test <- data[-inTrain,]
+
+fit <- glm(Churn~age+annualincome+calldroprate+
+             education+gender+callfailurerate+
+             customersuspended+homeowner+
+             maritalstatus+monthlybilledamount+
+             numberofcomplaints+numberofmonthunpaid+
+             numdayscontractequipmentplanexpiring+
+             occupation+penaltytoswitch+state+
+             totalminsusedinlastmonth+unpaidbalance+
+             usesinternetservice+usesvoiceservice+percentagecalloutsidenetwork
+           +totalcallduration+avgcallduration+year, data=train,family=binomial)
+kable(summary(fit))
+# making predictions
+churn.probs <- predict(fit, test, type="response")
+head(churn.probs)
+
+contrasts(df$Churn)  # Yes = 1, No = 0
+glm.pred = rep("No", length(churn.probs))
+glm.pred[churn.probs > 0.5] = "Yes"
+
+confusionMatrix(glm.pred, test$Churn, positive = "Yes")
+```
+
+## Step 2: Fit Logistic Regression Model
+
+Now that the data is split, I’ll fit a logistic regression model using all of the features. After I fit the model, I’ll take a look at the confusion matrix to see how well the model made predictions on the validation set.
+
+```{r fitModel}
+# fitting the model
+fit <- glm(Churn~., data=train, family=binomial)
+
+# making predictions
+churn.probs <- predict(fit, test, type="response")
+head(churn.probs)
+View(data)
+```
+
+```{r}
+data_train <- subset(data, month==1 | month==2, 
+select=age:churn)
+View(data_train)
+data_test <- subset(data, month==3, select = age:churn)
+
+fit <- glm(churn~age+annualincome+calldroprate+
+             education+gender+callfailurerate+
+             customersuspended+homeowner+
+             maritalstatus+monthlybilledamount+
+             numberofcomplaints+numberofmonthunpaid+
+             numdayscontractequipmentplanexpiring+
+             occupation+penaltytoswitch+state+
+             totalminsusedinlastmonth+unpaidbalance+
+             usesinternetservice+usesvoiceservice+percentagecalloutsidenetwork
+           +totalcallduration+avgcallduration, data=data_train, family=binomial)
+
+# making predictions
+churn.probs <- predict(fit, data_test, type="response")
+head(churn.probs)
+glm.pred = rep(0, length(churn.probs))
+glm.pred[churn.probs > 0.5] = 1
+
+classMetrics <- function(score, y, cutoff, 
+                         type = c("all", "accuracy", "sensitivity", 
+                                  "specificity", "ppv", "npv", "precision", 
+                                  "recall")) {
+
+# This command throws an error if the user specifies a "type" that
+# isn't supported by this function
+type <- match.arg(type, several.ok = TRUE)  
+our_result<-numeric()
+for(i in 1:length(score)){
+  if(score[i]>cutoff){
+    our_result<-c(our_result,1) #if greater then cutoff 1
+  }
+  else{
+    our_result<-c(our_result,0) #if lesser than or equal to cutoff then 0
+  }
+}
+#We shall now create the confusion matrix
+y.fakefactor<-factor(y) #Converting y into factors
+or.factor<-factor(our_result) #Converting our_result into factors
+x=table(round(our_result), y)
+names(dimnames(x)) <- c("predicted", "actual")
+
+ym<-as.matrix(x)
+new_mat <- matrix(0,nrow=2,ncol=2)  
+# 'new_mat' rows getting filled with `mat` values
+if(nrow(ym)==1){
+new_mat[1,] <- ym
+
+ym=new_mat
+}
+sum(ym)
+ # print("y[2,1]")
+ # print(ym[2,1])
+acc<-(ym[2,2]+ym[1,1])/sum(ym)
+sensi<-ym[2,2]/(ym[2,2]+ym[1,2])
+spec<-ym[1,1]/(ym[1,1]+ym[2,1])
+ppv<-ym[2,2]/(ym[2,2]+ym[2,1])
+npv<- ym[1,1]/(ym[1,1]+ym[1,2])
+prec<-ym[2,2]/(ym[2,2]+ym[2,1])
+recall<-ym[2,2]/(ym[2,2]+ym[1,2])
+
+perfv<-c(acc,sensi,spec,ppv,npv,prec,recall)
+perfdf<-data.frame(perfv) #Convert the vector into a dataframe
+rownames(perfdf) <- c("accuracy", "sensitivity", 
+                                  "specificity", "ppv", "npv", "precision", 
+                                  "recall")
+
+perf=data.frame()
+
+names(perfdf) <- "values"
+library(pracma)
+if(strcmp(type[1],"all")) {
+ret_list<-  list(conf.mat = as.matrix(x), perf = perfdf)
+}else{
+
+ret_list<-list(conf.mat = as.matrix(x), perf = subset(perfdf, subset=rownames(perfdf) %in% type))
+}
+
+return(ret_list)
+}
+
+rf.perform.measure<-classMetrics(glm.pred,data_test$churn, 0.5, type = "all")
+rf.perform.measure$conf.mat
+rf.perform.measure$perf
+#confusionMatrix(glm.pred, data_test$Churn, positive = "Yes")
+```
