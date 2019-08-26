@@ -1,0 +1,303 @@
+---
+title: "EDA_DemoData"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r churn data}
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(corrplot)
+df <- read.csv("C:/Users/Malvika's Dell XPS13/Downloads/demodata.csv",header = TRUE, sep = ",")
+df <- df[,-8]
+df<- df[,-7]
+df<- df[,-7]
+df<- df[,-7]
+df <- df[,-7]
+df <- df[,-7]
+df <- df[,-8]
+df <- df[,-11]
+df <- df[,-12]
+df <- df[,-14]
+df<- df[,-14]
+df<-df[,-7]
+df<-df[,-9]
+df<-df[,-10]
+nums <- unlist(lapply(df, is.numeric)) 
+df_num <- df[ , nums]
+#blue indicates positive correlation, red indicates negative
+df2 <- cor(df_num, use = "na.or.complete")
+corrplot(df2, method="shade",shade.col=NA, tl.col="black", tl.srt=45)
+```
+
+## Correlation Plot
+The correlation plot does not provide us with much insight on the relationship between the variables.
+
+## Summary of Data
+```{r}
+print(summary(df))
+```
+
+
+```{r}
+paste("The dimension of the data is ",dim(df))
+paste("Number of rows in the dataset is ",nrow(df))
+paste("Number of cols in the dataset is ",ncol(df))
+paste("Variables in the dataset are ")
+names(df)
+```
+## Checking for Null Values in the data
+```{r}
+library(tidyverse)
+df <- read.csv("C:/Users/Malvika's Dell XPS13/Downloads/demodata.csv")
+df %>% map(~ sum(is.na(.)))
+#No null values
+paste("churned ",colSums(as.matrix(df$churn) != 0))
+paste("Not churned ", colSums(as.matrix(df$churn) == 0))
+
+```
+```{r}
+library(ggplot2)
+library(gridExtra)
+df <- read.csv("C:/Users/Malvika's Dell XPS13/Downloads/demodata.csv")
+qplot(df$churn, xlab = "Churned or Not", ylab = "Total count of Churned or Not") + ggtitle("Churned count") + theme(plot.title = element_text(size = 10, face = "bold"))
+```
+## Questions asked in the analysis
+1. Are men more likely to churn than women?
+2. Are senior citizens more like to churn?
+3. Do individuals with a partner churn more than those without a partner?
+```{r}
+df <- read.csv("C:/Users/Malvika's Dell XPS13/Downloads/demodata.csv")
+Churn <- with(df, ifelse(churn==0, "No","Yes"))
+df <- data.frame(df,Churn)
+ggplot(df)+geom_bar(aes(x=gender,fill=Churn),position="dodge")
+```
+## Questions asked in the analysis
+1. Are men more likely to churn than women?
+2. Are senior citizens more like to churn?
+3. Do individuals with a partner churn more than those without a partner?
+4. Are homeowners more prone to churning out?
+5. How does the income bracket affect churning rates?
+```{r}
+#Transform variable age to determine senior citizen or not
+age_cat <- with(df, ifelse(age <= 60, "<60",">60"))
+df <- data.frame(df,age_cat)
+
+df %>%
+  group_by(gender,Churn) %>%
+  summarise(n=n())
+
+df %>%
+  group_by(gender, Churn) %>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n))
+```
+## Which gender is more likely to churn?
+More number of women(9.2%) are likely to churn out than men(8.9%).
+```{r}
+df <- df %>% mutate_if(is.character, as.factor)
+df$age_cat <- as.factor(df$age_cat)
+ggplot(df) +
+  geom_bar(aes(x = age_cat, fill = Churn), position = "dodge")
+```
+```{r}
+df %>%
+  group_by(age_cat, Churn) %>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n))
+```
+## Which age group is more likely to churn?
+Younger population(10%) is twice as likely to churn out than senior citizens(5%).
+```{r}
+#People with/without partner
+ggplot(df) +
+  geom_bar(aes(x=maritalstatus, fill = Churn), position = "dodge")
+
+df %>%
+  group_by(maritalstatus) %>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n))
+
+df %>%
+  group_by(maritalstatus, Churn) %>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n))
+```
+## Which type of person is more likely to churn?
+More number of single people(9.6%) is likely to churn out than married people(8.5%).
+```{r}
+ggplot(df) +
+  geom_bar(aes_string(x="homeowner", fill="Churn"), position = "dodge")
+
+df %>% group_by(homeowner, Churn) %>%
+  summarise(n=n()) %>%
+  mutate(freq = n / sum(n))
+
+df %>% group_by(homeowner) %>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n))
+```
+## Which type of person is more likely to churn?
+Significantly more number of homeowners(80%) are likely to churn out than those who are not (20%). This may be due to more usage of phone and internet services by homeowners as they have more responsibilities to make online orders, transfer money(all using internet services),making phone calls etc. One thing to be noted is that all these activities happen during the busy times of the day, resulting in more congestion and hence poor service at times.
+
+
+```{r}
+Income_cat <- with(df, ifelse(annualincome <= 10000, "Low", (ifelse(annualincome<100000,"Medium","High"))))
+df <- data.frame(df, Income_cat)
+
+ggplot(df) +
+  geom_bar(aes_string(x="Income_cat", fill="Churn"), position = "dodge")
+
+df %>% group_by(Income_cat, Churn) %>%
+  summarise(n=n()) %>%
+  mutate(freq = n / sum(n))
+
+df %>% group_by(Income_cat) %>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n))
+```
+## Which income group is more likely to churn?
+Low income group (11.2%) is more likely to churn out than the mid and high income groups(8.9% and 9.0% respectively). This is because low income group people may have opted for cheaper plans whose service delivery may be inferior as compare dto higher charged plans which the high income people can afford.
+```{r}
+## Churn vs Education
+ggplot(df) +
+  geom_bar(aes_string(x="education", fill="Churn"), position = "dodge")
+
+df %>% group_by(education, Churn) %>%
+  summarise(n=n()) %>%
+  mutate(freq = n / sum(n))
+
+df %>% group_by(education) %>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n))
+```
+## Which type of person is more likely to churn?
+PhD or equivalent are more likely to churn out than bachelors, than masters followed by high school educated people.
+```{r}
+### Occupation vs Churn --> similar for all occupations, so not a useful parameter
+### State wise churn --> similar trend across all states so again not useful
+ggplot(df) +
+  geom_bar(aes_string(x="numberofcomplaints", fill="Churn"), position = "dodge")
+
+df %>% group_by(numberofcomplaints, Churn) %>%
+  summarise(n=n()) %>%
+  mutate(freq = n / sum(n))
+
+df %>% group_by(numberofcomplaints) %>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n))
+```
+```{r}
+ggplot(df) +
+  geom_bar(aes_string(x="usesinternetservice", fill="Churn"), position = "dodge")
+
+df %>% group_by(usesinternetservice, Churn) %>%
+  summarise(n=n()) %>%
+  mutate(freq = n / sum(n))
+
+df %>% group_by(usesinternetservice) %>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n))
+
+```
+#Who use internet service have higher rate of churning than those who don't use internet service
+
+## Call Drop Rates v/s different parameters
+```{r}
+# Call drop rate vs gender
+ggplot(df, aes(x = gender, y = calldroprate)) +
+  geom_boxplot()
+#Call drop rate vs senior citizen
+ggplot(df, aes(x = age_cat, y = calldroprate)) +
+  geom_boxplot()
+#Call drop rate vs Partner
+ggplot(df, aes(x = maritalstatus, y = calldroprate)) +
+  geom_boxplot()
+#Call drop rate vs Income
+ggplot(df, aes(x = Income_cat, y = calldroprate)) +
+  geom_boxplot()
+
+```
+```{r}
+# Senior Citizens
+ggplot(df, aes(x = maritalstatus, y = penaltytoswitch)) +
+  geom_boxplot()
+```
+## Which group must be prioritised from churning out?
+The young population category and the high income category of people generate the maximum revenue and hence they must be targeted more so that they do not churn.
+```{r}
+### Total bill paid by single people in last month who churned
+a1 = df %>%
+  select(maritalstatus, Churn, monthlybilledamount, totalminsusedinlastmonth) %>%
+  filter(maritalstatus == "Single", Churn == "Yes") %>%
+  summarise(n = n(),
+            totalSingle = sum(monthlybilledamount),
+            avg_tenure = sum(totalminsusedinlastmonth)/n)
+SeniorCitizen <- with(df, ifelse(age<=60, 0,1))
+df <- data.frame(df,SeniorCitizen)
+### Total bill paid by senior citizens in last month who churned
+a2 = df %>%
+  select(SeniorCitizen, Churn, monthlybilledamount, totalminsusedinlastmonth) %>%
+  filter(SeniorCitizen == 0, Churn == "Yes") %>%
+  summarize(n = n(),
+            totalNotSenior = sum(monthlybilledamount),
+            avg_tenure = sum(totalminsusedinlastmonth)/n)
+### Total bill paid by High income people in last month who churned
+a3 = df %>%
+  select(Income_cat, Churn, monthlybilledamount, totalminsusedinlastmonth) %>%
+  filter(Income_cat == "High", Churn == "Yes") %>%
+  summarize(n = n(),
+            totalHighIncome = sum(monthlybilledamount),
+            avg_tenure = sum(totalminsusedinlastmonth)/n)
+as.matrix(c(a1,a2,a3))
+```
+```{r}
+#The non senior citizen category and the high income category of people generate the maximum revenue and hence they must be targeted more so that they do not churn.
+```
+```{r}
+### Total unpaid bill paid by single people in last month who churned
+a1 = df %>%
+  select(maritalstatus, Churn, unpaidbalance, totalminsusedinlastmonth) %>%
+  filter(maritalstatus == "Single", Churn == "Yes") %>%
+  summarise(n = n(),
+            totalSingle = sum(unpaidbalance),
+            avg_tenure = sum(totalminsusedinlastmonth)/n)
+
+### Total unpaid bill paid by senior citizens in last month who churned
+a2 = df %>%
+  select(SeniorCitizen, Churn, unpaidbalance, totalminsusedinlastmonth) %>%
+  filter(SeniorCitizen == 0, Churn == "Yes") %>%
+  summarize(n = n(),
+            totalNotSenior = sum(unpaidbalance),
+            avg_tenure = sum(totalminsusedinlastmonth)/n)
+### Total unpaid bill paid by High income people in last month who churned
+a3 = df %>%
+  select(Income_cat, Churn, unpaidbalance, totalminsusedinlastmonth) %>%
+  filter(Income_cat == "High", Churn == "Yes") %>%
+  summarize(n = n(),
+            totalHighIncome = sum(unpaidbalance),
+            avg_tenure = sum(totalminsusedinlastmonth)/n)
+as.matrix(c(a1,a2,a3))
+```
+#Since both paid and unpaid bills are highest for the younger population, we will see what services do they use
+```{r}
+#Since both paid and unpaid bills are highest for the younger population, we will see what services do they use
+senior <- with(df, ifelse(age <= 60, "No","Yes"))
+df <- data.frame(df,senior)
+
+young_pop <- df %>% filter(senior == "No")
+library(ggplot2)
+library(miscset)
+ggplotGrid(ncol=2,
+lapply(c("noadditionallines","usesinternetservice","usesvoiceservice"),
+       function(col){
+         ggplot(young_pop,aes_string(col)) + geom_bar(aes(fill=Churn),position="dodge")
+       }))
+```
+#Internet service is most used category
+
+
